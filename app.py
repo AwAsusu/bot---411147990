@@ -1,25 +1,36 @@
 # -*- coding: utf-8 -*-
 
-import re
+#載入LineBot所需要的套件
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationSendMessage
+
+from linebot import (
+    LineBotApi, WebhookHandler
+)
+from linebot.exceptions import (
+    InvalidSignatureError
+)
+from linebot.models import *
+import re
 app = Flask(__name__)
 
 # 必須放上自己的Channel Access Token
-line_bot_api = LineBotApi('cOV7xFlKlK9pMjcjLyCGVbrfVKjRtsrkpb3puKiOQJjX0x500jd409hJG2LI9DUsAxElAqdnl367/ckwVwU3szWQc20hzmwiOXdCaFFDVfT3SAO1ShRKSzGpe5it83MA5Z3Zw4UXkwiK2FSo54bXqQdB04t89/1O/w1cDnyilFU=')
+line_bot_api = LineBotApi('uCsEQcK8/n0y6Ry7nNYY2LTMIWRlKRP5Pc5skuVxHUK0kGHPdeMJOGKu6yDC++Mcf0ECgMF2F4mbuFI09sUWo75OU0QFVGNDohhmmY2mQIMizGkTLEkU5gUvWABAdBy0VQjZLQFDCZQ6wrCgfP5fgQdB04t89/1O/w1cDnyilFU=')
 # 必須放上自己的Channel Secret
-handler = WebhookHandler('66d3e9a98d9fda9a1a2759b900723497')
+handler = WebhookHandler('0b346da981e91dd30f384a1d8cd46b39')
 
-line_bot_api.push_message('Ub7fe430067da033fed91a0467d46a2d4', TextSendMessage(text='你可以開始了'))
+line_bot_api.push_message('Uc9bf2374d88a474691d2827c396900f0', TextSendMessage(text='你可以開始了'))
 
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback():
+    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
-    body = request.get_data(as_text=True)
 
+    # get request body as text
+    body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
+
+    # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
@@ -27,10 +38,12 @@ def callback():
 
     return 'OK'
 
+#訊息傳遞區塊
+##### 基本上程式編輯都在這個function #####
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    message = event.message.text
-    if message == '告訴我秘密':  # 更高效的匹配方式
+    message = text=event.message.text
+    if re.match('告訴我秘密',message):
         location_message = LocationSendMessage(
             title='台中市政府',
             address='台中',
@@ -39,7 +52,9 @@ def handle_message(event):
         )
         line_bot_api.reply_message(event.reply_token, location_message)
     else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=message))
-
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
+#主程式
+import os
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
